@@ -1,20 +1,3 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2024 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -31,14 +14,12 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-// Define the buzzer pin for clarity
+// Define buzzer control pin (PA0)
 #define BUZZER_GPIO_PORT GPIOA
-#define BUZZER_GPIO_PIN GPIO_ODR_ODR0 // For PA0
-
+#define BUZZER_GPIO_PIN_ODR (1 << 0) // For PA0
 /* USER CODE END PD */
-uint8_t flag = 0;
-uint8_t flag1 = 0;
-
+// uint8_t flag = 0; // flag and flag1 are no longer used for continuous blinking
+// uint8_t flag1 = 0;
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
@@ -53,32 +34,27 @@ uint8_t flag1 = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+
+// Timer 1 configuration for microsecond delay
 void tim1_config() {
-    // Enable TIM1 clock
-    RCC->APB2ENR |= RCC_APB2ENR_TIM1EN;
-
-
-    TIM1->PSC = 72 - 1;  // Assuming clock is 8
-    TIM1->ARR = 0xFFFF;  // Max ARR
-
-    // Enable the timer
-    TIM1->CR1 |= TIM_CR1_CEN;
+    RCC->APB2ENR |= (1 << 11);     // Enable TIM1 clock
+    TIM1->PSC = 72 - 1;            // Prescaler for 1 MHz timer (assuming 72 MHz system clock)
+    TIM1->ARR = 0xFFFF;            // Set auto-reload register to max value
+    TIM1->CR1 |= (1 << 0);         // Enable TIM1
 }
 
+// Microsecond delay using TIM1
 void Delay_us(uint16_t us) {
-    TIM1->CNT = 0;  // reset counter
-   while (TIM1->CNT < us);
+    TIM1->CNT = 0;                 // Reset counter
+    while (TIM1->CNT < us);       // Wait until desired time has passed
 }
 
+// Millisecond delay based on Delay_us
 void Delay_ms(uint16_t ms) {
     for (uint16_t i = 0; i < ms; i++) {
-        Delay_us(1000);  // 1 ms
+        Delay_us(1000);           // 1 millisecond delay
     }
 }
-
-
-
-
 
 /* USER CODE BEGIN PFP */
 
@@ -95,193 +71,78 @@ void Delay_ms(uint16_t ms) {
   */
 int main(void)
 {
-
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
-
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
 
   /* Configure the system clock */
-  SystemClock_Config();
-  //void tim1_config();
-  //void hell_nah(uint16_t us);
- // void delay_ms(uint16_t ms);
-      RCC->APB2ENR |= 0b10000;  // Enable clock for C
-      GPIOC->CRH &= ~(GPIO_CRH_MODE13 | GPIO_CRH_CNF13);  // Clear
-      GPIOC->CRH |= GPIO_CRH_MODE13_1;  // Output
+  RCC->APB2ENR |= (1 << 4);          // Enable GPIOC clock
+  GPIOC->CRH &= ~((15) << (20));     // Clear PC13 config bits
+  GPIOC->CRH |= (1 << 20);           // Set PC13 as output (10 MHz)
 
-      RCC->APB2ENR |= 0b1000;//enable B port
+  RCC->APB2ENR |= (1 << 3);          // Enable GPIOB clock
 
-      //PB1 input
-      GPIOB -> CRL &= ~(GPIO_CRL_MODE1); //clear
-      GPIOB -> CRL &= ~(GPIO_CRL_CNF1);//clear
-      GPIOB -> CRL |= GPIO_CRL_CNF1_1; //input mode
-      GPIOB -> ODR |= GPIO_ODR_ODR1; // pull up resister
+  // Configure PB1 as input with pull-up
+  GPIOB->CRL &= ~((3) << (4));       // Clear MODE1
+  GPIOB->CRL |= (1 << (4 + 2));      // Set CNF1 to 10 (input pull-up/down)
+  GPIOB->ODR |= (1 << 1);            // Enable pull-up on PB1
 
+  // Configure PB10 as output
+  GPIOB->CRH &= ~((15) << (8));      // Clear config bits
+  GPIOB->CRH |= (1 << (8));          // Set as output (10 MHz)
 
-      GPIOB->CRH &= ~(GPIO_CRH_MODE10 | GPIO_CRH_CNF10);  // Clear
-      GPIOB->CRH |= GPIO_CRH_MODE10_1;
-      GPIOB->CRH &= ~(GPIO_CRH_MODE11 | GPIO_CRH_CNF11);  // Clear
-      GPIOB->CRH |= GPIO_CRH_MODE11_1;
+  // Configure PB11 as output
+  GPIOB->CRH &= ~((15) << (12));     // Clear config bits
+  GPIOB->CRH |= (1 << (12));         // Set as output (10 MHz)
 
-
-
-      // Configure Timer 1
-      tim1_config();
+  // Configure PA0 as output for buzzer
+  RCC->APB2ENR |= (1 << 2);          // Enable GPIOA clock
+  GPIOA->CRL &= ~((15) << (0));      // Clear PA0 config bits
+  GPIOA->CRL |= (1 << (0));          // Set PA0 as output (10 MHz)
 
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
+
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
- /* RCC ->APB2ENR |= RCC_APB2ENR_IOPCEN  ; // line 1289 enable clock for c port
-  GPIOC ->CRH |=  GPIO_CRH_MODE13_1;
-  GPIOC ->CRH &= ~GPIO_CRH_CNF13;
-  GPIOC ->ODR &= ~GPIO_ODR_ODR13;
-	  delay_ms(500);
 
-      GPIOC ->ODR |=  GPIO_ODR_ODR13;
-*/
+  GPIOB->ODR |= (1 << 11);           // Turn on LED at PB11
+  GPIOB->ODR |= (1 << 10);           // Turn on LED at PB10
 
-      GPIOB->ODR |= GPIO_ODR_ODR11;
-      GPIOB->ODR |= GPIO_ODR_ODR10;
   while (1)
   {
-	  Delay_ms(10);
+    Delay_ms(10);                    // Short polling delay
 
-	  if ((GPIOB->IDR & GPIO_IDR_IDR1) == 0) {
-	 //(working) // Toggle LED
-			   GPIOB->ODR &= ~GPIO_ODR_ODR11;
-	       if (!flag){
-	          for (int i = 0;i <4;i++){
-	        	  if((GPIOB->IDR & GPIO_IDR_IDR1) != 0){
-	        		  GPIOB->ODR |= (1 << 11);
-	              	  	    Delay_ms(700);
-	              	  	    GPIOB->ODR ^= GPIO_ODR_ODR10;
-
-	        	  }
-	              else{
-	            	  Delay_ms(700);
-	            	  GPIOB->ODR ^= GPIO_ODR_ODR10;
-	              }
-	          if(i == 3){
-	        	   flag =1;
-	           }
-	          }//blinking twice
-
-
-	       }
-			  BUZZER_GPIO_PORT->ODR |= BUZZER_GPIO_PIN;
-
-
-	       flag = 0;
-	  }
-
-	  else {
-		  GPIOB->ODR |= (1 << 10);
-		  GPIOB->ODR |= (1 << 11);
-    	  	BUZZER_GPIO_PORT->ODR &= ~BUZZER_GPIO_PIN;
-
-
-		  flag = 0;
-
-	  }
+    // Check if button at PB1 is pressed (active low)
+    if (((GPIOB->IDR >> 1) & 1) == 0) {
+        GPIOB->ODR &= ~(1 << 11);    // Turn off PB11 LED
+        GPIOB->ODR ^= (1 << 10);     // Toggle PB10 LED
+        BUZZER_GPIO_PORT->ODR |= BUZZER_GPIO_PIN_ODR; // Turn buzzer ON
+        Delay_ms(250);               // Buzzer/LED ON delay
+    }
+    else {
+        // Button not pressed: turn both LEDs ON, turn buzzer OFF
+        GPIOB->ODR |= (1 << 10);     // Turn PB10 LED ON
+        GPIOB->ODR |= (1 << 11);     // Turn PB11 LED ON
+        BUZZER_GPIO_PORT->ODR &= ~BUZZER_GPIO_PIN_ODR; // Turn buzzer OFF
+    }
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  //}
+  }
   /* USER CODE END 3 */
-	  }
-  }
-
-
-
-
-
-
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-  {
-    Error_Handler();
-  }
 }
-
-
-
-/* USER CODE END 4 */
-
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
-}
-
-#ifdef  USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
-void assert_failed(uint8_t *file, uint32_t line)
-{
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
-}
-#endif /* USE_FULL_ASSERT */
